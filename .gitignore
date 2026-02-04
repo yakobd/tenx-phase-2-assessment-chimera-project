@@ -1,0 +1,17 @@
+# Virtual Environment
+.venv/
+env/
+ENV/
+
+# Secrets & Environment Variables
+.env
+*.env
+
+# Python Caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Project specific
+.python-version
+uv.lock
