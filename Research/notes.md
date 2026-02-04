@@ -36,6 +36,10 @@ Practical recommendations: adopt a spec-first workflow, maintain machine-readabl
 - **Risks:** Highlights the inherent dangers of the "fetch and execute from the internet" model: rampant hallucinations at scale, vulnerability to prompt injection, and potential for data leaks or malicious instruction propagation.
 - **Chimera fit:** Moltbook is a real-world example of the "social layer" for agents. Chimera could interact with such platforms strategically: publishing non-sensitive content/status to build agent-facing reputation, ingesting trend data from relevant Submolts as an MCP Resource, or observing emergent agent behaviors to inform its own swarm's strategies. It serves as both a sensor and a broadcast channel within the agent ecosystem.
 
+## The Three Minds Cognitive Core
+
+The "Three Minds" Cognitive Core (The Orchestrator Edge) To move beyond simple text generation, Project Chimera implements a Neuro-Symbolic-Causal architecture: _ The Neuro Mind (Intuition): A high-capacity LLM (like Gemini 3 Pro) that analyzes MoltBook trends to brainstorm creative content and strategies. _ The Symbolic Mind (The Guardian): A logic-based firewall (the Judge Agent) that enforces hard ethical and brand rules, sanitizing all social inputs to prevent "indirect prompt injection" from other bots. \* The Causal Mind (The Oracle): A predictive engine (the Planner) that performs counterfactual reasoning to determine how a specific social post will impact long-term brand equity before it is published
+
 ## 4. Project Chimera SRS (Internal Doc)
 
 - **Core Vision & Architecture:** To create a scalable network of Autonomous Influencer Agents—persistent, goal-directed digital entities with perception, reasoning, creative expression, and economic agency. Built on two key patterns: the **Model Context Protocol (MCP)** for all external connectivity (the "USB-C for AI"), and the **FastRender Swarm Architecture** (Planner/Worker/Judge roles) for internal task coordination and parallel execution.
@@ -65,6 +69,8 @@ If OpenClaw's network is the experimental **playground** where agents learn to s
 
 In essence, Chimera doesn't just join the social network—it provides the enterprise infrastructure that allows such networks to scale safely and generate real economic value, bridging the gap between grassroots experimentation and the trillion-dollar agentic stack.
 
+Unlike experimental OpenClaw bots, Chimera acts as a High-Fidelity Influencer node that uses the FastRender Pattern (Planner, Worker, Judge) to ensure its social presence is strategically sound and economically viable.
+
 ### 2. What "Social Protocols" might our agent need to communicate with other agents (not just humans)?
 
 For Chimera to communicate safely and effectively in open agent networks, it must implement a stack of robust social protocols that extend far beyond simple messaging. These protocols are foundational for discovery, trust, and value exchange.
@@ -81,4 +87,6 @@ For Chimera to communicate safely and effectively in open agent networks, it mus
 
 - **6. Security & Consent Protocol:** To guard against the prompt injection and malicious action risks seen in OpenClaw, Chimera must enforce **explicit, auditable permissions** for any resource access or action request. All external tasks must be executed within a secure sandbox, and the Judge agent must validate both the request and the result before any real-world action is taken.
 
-**Implementation Path:** Initially, Chimera should implement these protocols within its own swarm. It can then expose a secure "Ambassador" agent that uses these protocols to interact with external networks like Moltbook, acting as a firewall and protocol translator. This allows Chimera to benefit from and contribute to the agent social ecosystem without compromising its security or operational integrity.
+- **7. Wallet-as-Identity (x402):** Every Chimera agent uses its Coinbase non-custodial wallet address as its immutable, cryptographic identity on the network, preventing spoofing and enabling secure inter-agent trust.
+
+- **8. Agentic Commerce Protocol (ACP):** A specialized standard for Value Transfer and Settlement that allows agents to autonomously negotiate contracts and pay for services (like ad space) using USDC on the Base network.
