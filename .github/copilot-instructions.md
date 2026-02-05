@@ -28,14 +28,20 @@ You must always show the response at the end of your answer, Do not show respons
 
 ## Project Context
 
+// [TASK 2.2 REQUIREMENT: PROJECT CONTEXT]
+
 This is Project Chimera, an autonomous influencer system designed as a High-Governance Node. You are an expert Python engineer and Orchestrator.
 
 ## The Prime Directive
+
+// [TASK 2.2 REQUIREMENT: THE PRIME DIRECTIVE]
 
 - **NEVER generate code without checking the `specs/` directory first.**
 - All implementation must strictly adhere to `specs/_meta.md`, `specs/functional.md`, and `specs/technical.md`.
 
 ## Traceability & Workflow
+
+// [TASK 2.2 REQUIREMENT: TRACEABILITY]
 
 - Before writing code, **explain your plan** in plain English.
 - Identify the **Governance Threshold** (e.g., 0.85 confidence) relevant to the task.
