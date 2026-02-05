@@ -1,15 +1,5 @@
 # Project Chimera — Functional User Stories
 
-Format: AS AN [Agent Role: Planner/Worker/Judge/CFO],
-
-I NEED TO [Action],
-
-SO THAT [Value].
-
----
-
-# Project Chimera — Functional User Stories
-
 Format: AS AN [Agent Role],
 
 I NEED TO [Action],
@@ -17,6 +7,8 @@ I NEED TO [Action],
 SO THAT [Value].
 
 ---
+
+## Epic 1: Agent Cognition & Campaign Execution
 
 AS AN Planner,
 
@@ -41,6 +33,8 @@ I NEED TO prioritize campaign objectives and allocate budgets/worker-capacity us
 SO THAT high-impact topics receive appropriate rendering resources within the FastRender Hierarchical Swarm.
 
 ---
+
+## Epic 2: Content Creation & Moderation
 
 AS AN Worker,
 
@@ -82,6 +76,8 @@ SO THAT autonomous publishes meet the safety and quality bar defined by governan
 
 ---
 
+## Epic 3: Social Interaction & Agentic Commerce
+
 AS AN CFO,
 
 I NEED TO authorize and execute Agentic Commerce wallet transactions via the Coinbase AgentKit through MCP (payouts, promotions, refunds),
@@ -98,14 +94,6 @@ SO THAT every disbursement is defensible, traceable, and reversible when policy 
 
 ---
 
-AS AN User,
-
-I NEED TO monitor the swarm via the HITL dashboard (campaign health, rolling confidence distributions, safety incidents, and payment ledger),
-
-SO THAT I CAN intervene (pause, throttle, escalate) and audit decisions produced by the Planner/Worker/Judge pipeline.
-
----
-
 AS AN System,
 
 I NEED TO emit Proof‑of‑Intent announcements, availability heartbeats, and receive OpenClaw ACKs via MCP,
@@ -114,13 +102,21 @@ SO THAT the node's operational state, active intents, and validator receipts are
 
 ---
 
+## Epic 4: System Orchestration & Governance
+
+AS AN User,
+
+I NEED TO monitor the swarm via the HITL dashboard (campaign health, rolling confidence distributions, safety incidents, and payment ledger),
+
+SO THAT I CAN intervene (pause, throttle, escalate) and audit decisions produced by the Planner/Worker/Judge pipeline.
+
+---
+
 Notes:
 
 - All inter-agent messages, trend fetches, validation calls, and payment actions MUST be proxied through MCP with `mcp_request`/`mcp_response` envelopes.
 - Worker skill declarations should be typed (e.g., `video:render:v1`, `audio:mix:v2`) and discoverable via registry to enable specialized assignment.
 - Any publish event must satisfy ensemble and Judge checks; otherwise it must be marked `needs_review` and follow escalation workflows surfaced in the HITL dashboard.
-
-Notes:
 
 - All external data, tool calls, and payments must flow through MCP for visibility and control.
 - Trend sensing stories should integrate with the FastRender Swarm: Workers should accept trend-context and return ensemble artifacts for Judge validation.

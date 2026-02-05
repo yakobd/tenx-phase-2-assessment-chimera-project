@@ -9,6 +9,16 @@ Purpose: This document is the canonical engineering specification for Project Ch
 
 Project Chimera is a High‑Governance Node for autonomous influencers: a policy-first coordination point that issues, verifies, and audits autonomous actions (content posts, promotions, and agentic payments). Chimera balances autonomous execution with enforceable safety controls and tamper‑evident auditability so that strategic intents translate into accountable, traceable outcomes.
 
+## Strategic Objective
+
+Solve the Creative Supply Chain failure by making high-quality, safe, and auditable influencer content programmatically scalable and commercially viable. Chimera enables three complementary business models, each realized and secured by the technical architecture:
+
+1. Digital Talent Agency — operate, manage, and monetize owned AI influencers (content creation, brand deals, creator payouts) under a centralized governance and audit model.
+2. Chimera OS (Platform-as-a-Service) — license the governance, FastRender orchestration, and MCP tooling to brands and creative platforms as a secure PaaS for autonomous content workflows.
+3. Hybrid Ecosystem — combine owned AI talent and third-party creators into a federated marketplace using Agentic Commerce, enabling shared monetization and on‑platform payments.
+
+The Core Architecture (FastRender Hierarchical Swarm, MCP envelopes, PostgreSQL audit store, and Weaviate semantic memory) is the enabler for these models — providing scalability, low-latency execution, tamper-evident traceability, and auditable financial rails (via AgentKit) required for commercial adoption.
+
 ## Core Architecture — FastRender Hierarchical Swarm
 
 Overview:

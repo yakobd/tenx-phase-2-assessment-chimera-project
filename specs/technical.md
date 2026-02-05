@@ -1,84 +1,80 @@
 # Project Chimera — Technical Specifications
 
-## Persistence Layer (PostgreSQL)
+Part 1: Internal Agent API Contracts
 
-This layer stores canonical campaign state, metadata, financial transactions, and tamper-evident audit envelopes. The design follows the Domain Architecture: normalized core entities (Campaigns, Transactions) with append-only `campaign_metadata` for intents, ACKs, and audit traces.
+This section defines the internal messaging schemas used for communication between Planner, Worker, and Judge agents within the Chimera node. All internal messages MUST be serializable to JSON and are expected to be wrapped in MCP envelopes when transmitted across process or network boundaries.
 
--- Campaigns
-CREATE TABLE campaigns (
-id UUID PRIMARY KEY,
-name TEXT NOT NULL,
-planner_id UUID NOT NULL,
-objective TEXT,
-start_at TIMESTAMPTZ,
-end_at TIMESTAMPTZ,
-status TEXT CHECK (status IN ('draft','active','paused','archived')),
-budget_bigint BIGINT,
-created_at TIMESTAMPTZ DEFAULT now(),
-updated_at TIMESTAMPTZ DEFAULT now()
-);
+### Task Schema (Planner -> Worker)
 
--- Campaign Metadata (append-only envelopes: PoI, ACKs, audit entries)
-CREATE TABLE campaign_metadata (
-id UUID PRIMARY KEY,
-campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
-envelope_type TEXT NOT NULL, -- e.g. intent|ack|audit|model_snapshot
-envelope JSONB NOT NULL, -- canonical PoI, ACK, or audit payload
-signature JSONB, -- {algorithm, public_key_ref, signature_blob, key_version}
-created_at TIMESTAMPTZ DEFAULT now()
-);
+Purpose: assign a unit of work to a Worker, referencing a campaign intent and required rendering spec.
 
--- Transactions (AgentKit-backed)
-CREATE TABLE transactions (
-id UUID PRIMARY KEY,
-campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL,
-agent_id UUID, -- initiating agent
-wallet_address TEXT,
-amount_bigint BIGINT,
-currency TEXT,
-tx_type TEXT, -- payout, ad_spend, refund, etc.
-status TEXT, -- pending, settled, failed
-agentkit_payload JSONB, -- raw AgentKit transaction envelope
-mcp_request_id UUID, -- link to MCP event/request
-audit_json JSONB, -- signed receipts, validation notes
-external_tx_ref TEXT, -- external blockchain/rail reference
-created_at TIMESTAMPTZ DEFAULT now(),
-settled_at TIMESTAMPTZ
-);
+JSON Schema (example):
 
-Notes:
-
-- Use `UUID` for primary keys and references; use `JSONB` for flexible payloads and audit envelopes.
-- Treat `campaign_metadata` as append-only: insert new metadata rows for each PoI, ACK, or audit event instead of mutating previous entries.
-- Persist cryptographic receipts (ACKs, signed verdicts) in `campaign_metadata.envelope` and store signature details in `signature`.
-
-## Vector Store (Weaviate) — Semantic Memory
-
-Weaviate stores embeddings and enables semantic search for content recall, trend-context retrieval, and similarity lookups. Use a class to capture canonicalized text/snippets, exemplars, and policy rationale with metadata for provenance.
-
-Example Weaviate Class (JSON):
 {
-"class": "SemanticMemory",
-"vectorizer": "text2vec-transformers",
-"moduleConfig": {"text2vec-transformers": {"pooling": "mean"}},
-"properties": [
-{"name": "text", "dataType": ["text"]},
-{"name": "campaignRef", "dataType": ["string"]},
-{"name": "agentRef", "dataType": ["string"]},
-{"name": "tags", "dataType": ["string[]"]},
-{"name": "policy_ref", "dataType": ["string"]},
-{"name": "timestamp", "dataType": ["date"]}
-]
+"mcp_request": {"request_id":"uuid","timestamp":"ISO8601","caller":{"agent_id":"uuid","role":"Planner"}},
+"task": {
+"task_id": "uuid",
+"campaign_id": "uuid",
+"intent_id": "uuid",
+"priority": "low|medium|high",
+"spec": {"format":"mp4","resolution":"1080p","duration_s":60},
+"assets": [{"type":"video|image|audio","ref_id":"weaviate-id|s3-uri"}],
+"deadline": "ISO8601",
+"metadata": {"tags": ["music","promo"]}
+}
 }
 
-Usage notes:
+### WorkerResult Schema (Worker -> Judge)
 
-- Store canonical content snippets, trend exemplars, and policy rationales in `SemanticMemory` with vector embeddings.
-- Persist Weaviate object IDs back into PostgreSQL rows (e.g., `campaign_metadata.envelope.ref_id`) to maintain referential links between relational records and semantic objects.
+Purpose: submit a completed artifact and related telemetry for validation.
 
-## API Contracts (MCP-standard JSON schemas)
+JSON Schema (example):
 
-All tool APIs MUST use an `mcp_request`/`mcp_response` envelope. Implementations should provide strict Pydantic models matching these schemas.
+{
+"mcp_request": {"request_id":"uuid","timestamp":"ISO8601","caller":{"agent_id":"uuid","role":"Worker"}},
+"result": {
+"artifact_id": "uuid",
+"task_id": "uuid",
+"campaign_id": "uuid",
+"media_metadata": {
+"id": "uuid",
+"uri": "s3://.../file.mp4",
+"media_type": "video",
+"size_bytes": 12345678,
+"checksums": {"sha256":"..."},
+"features": {"duration_s":120, "resolution":"1080p"},
+"embedding_ref": "weaviate-id"
+},
+"render_telemetry": {"worker_version":"v1","model_versions": {"captioner":"v2"}},
+"semantic_refs": ["weaviate-id-1","weaviate-id-2"]
+}
+}
+
+### Judgment Schema (Judge -> Planner/System)
+
+Purpose: communicate verdicts, confidence, and signed decisions back to the Planner and system for publish or escalation.
+
+JSON Schema (example):
+
+{
+"mcp_response": {"request_id":"uuid","timestamp":"ISO8601"},
+"judgment": {
+"artifact_id": "uuid",
+"verdict": "pass|fail|needs_review",
+"checks": {"toxicity": {"score":0.12,"pass":true}},
+"confidence": 0.92,
+"explainability": {"highlights": [{"span":[10,45],"reason":"factuality_issue"}]},
+"signed_by": "judge_agent_id",
+"signature": {"algorithm":"ed25519","public_key_ref":"did:key:...","signature_blob":"base64"},
+"audit": {"mcp_request_id":"uuid","policy_version":"v1"}
+}
+}
+
+---
+
+Part 1 (continued): External MCP Service APIs
+
+Rename of previous 'API Contracts' for external tools and services (Trend Sensing, Judge Validation, etc.). These are calls made via MCP to external adapters or microservices.
 
 fetch_trends (MoltBook + ensemble) — Request (Input):
 {
@@ -142,10 +138,150 @@ Response (Output):
 "audit": {"mcp_request_id": "uuid", "policy_version": "v1"}
 }
 
-Schema Notes:
+---
 
-- The `mcp_request` / `mcp_response` envelope is mandatory for all tool interactions to ensure traceability.
-- Use Pydantic models for request/response validation and automatic API docs generation in FastAPI.
+Part 2: Database Schema & ERD
+
+## Persistence Layer (PostgreSQL)
+
+This layer stores canonical campaign state, metadata, financial transactions, and tamper-evident audit envelopes. The design follows the Domain Architecture: normalized core entities (Campaigns, Transactions) with append-only `campaign_metadata` for intents, ACKs, and audit traces.
+
+-- Campaigns
+CREATE TABLE campaigns (
+id UUID PRIMARY KEY,
+name TEXT NOT NULL,
+planner_id UUID NOT NULL,
+objective TEXT,
+start_at TIMESTAMPTZ,
+end_at TIMESTAMPTZ,
+status TEXT CHECK (status IN ('draft','active','paused','archived')),
+budget_bigint BIGINT,
+created_at TIMESTAMPTZ DEFAULT now(),
+updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Campaign Metadata (append-only envelopes: PoI, ACKs, audit entries)
+CREATE TABLE campaign_metadata (
+id UUID PRIMARY KEY,
+campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+envelope_type TEXT NOT NULL, -- e.g. intent|ack|audit|model_snapshot
+envelope JSONB NOT NULL, -- canonical PoI, ACK, or audit payload
+signature JSONB, -- {algorithm, public_key_ref, signature_blob, key_version}
+created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Content Assets (video metadata)
+CREATE TABLE content_assets (
+id UUID PRIMARY KEY,
+campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+worker_id UUID,
+uri TEXT NOT NULL,
+media_type TEXT CHECK (media_type IN ('video','image','audio','text')),
+size_bytes BIGINT,
+checksums JSONB,
+features JSONB,
+embedding_ref TEXT,
+created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Transactions (AgentKit-backed)
+CREATE TABLE transactions (
+id UUID PRIMARY KEY,
+campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL,
+agent_id UUID, -- initiating agent
+wallet_address TEXT,
+amount_bigint BIGINT,
+currency TEXT,
+tx_type TEXT, -- payout, ad_spend, refund, etc.
+status TEXT, -- pending, settled, failed
+agentkit_payload JSONB, -- raw AgentKit transaction envelope
+mcp_request_id UUID, -- link to MCP event/request
+audit_json JSONB, -- signed receipts, validation notes
+external_tx_ref TEXT, -- external blockchain/rail reference
+created_at TIMESTAMPTZ DEFAULT now(),
+settled_at TIMESTAMPTZ
+);
+
+Notes:
+
+- Use `UUID` for primary keys and references; use `JSONB` for flexible payloads and audit envelopes.
+- Treat `campaign_metadata` as append-only: insert new metadata rows for each PoI, ACK, or audit event instead of mutating previous entries.
+- Persist cryptographic receipts (ACKs, signed verdicts) in `campaign_metadata.envelope` and store signature details in `signature`.
+
+## Vector Store (Weaviate) — Semantic Memory
+
+Weaviate stores embeddings and enables semantic search for content recall, trend-context retrieval, and similarity lookups. Use a class to capture canonicalized text/snippets, exemplars, and policy rationale with metadata for provenance.
+
+Example Weaviate Class (JSON):
+{
+"class": "SemanticMemory",
+"vectorizer": "text2vec-transformers",
+"moduleConfig": {"text2vec-transformers": {"pooling": "mean"}},
+"properties": [
+{"name": "text", "dataType": ["text"]},
+{"name": "campaignRef", "dataType": ["string"]},
+{"name": "agentRef", "dataType": ["string"]},
+{"name": "tags", "dataType": ["string[]"]},
+{"name": "policy_ref", "dataType": ["string"]},
+{"name": "timestamp", "dataType": ["date"]}
+]
+}
+
+Usage notes:
+
+- Store canonical content snippets, trend exemplars, and policy rationales in `SemanticMemory` with vector embeddings.
+- Persist Weaviate object IDs back into PostgreSQL rows (e.g., `campaign_metadata.envelope.ref_id`) to maintain referential links between relational records and semantic objects.
+
+## Entity Relationship Diagram (ERD)
+
+Below is a Mermaid.js ERD showing relationships between `campaigns`, `campaign_metadata`, `transactions`, and `content_assets`.
+
+```mermaid
+erDiagram
+		CAMPAIGNS {
+				UUID id
+				TEXT name
+				UUID planner_id
+		}
+		CAMPAIGN_METADATA {
+				UUID id
+				UUID campaign_id
+				JSONB envelope
+		}
+		CONTENT_ASSETS {
+				UUID id
+				UUID campaign_id
+				TEXT uri
+		}
+		TRANSACTIONS {
+				UUID id
+				UUID campaign_id
+				BIGINT amount_bigint
+		}
+
+		CAMPAIGNS ||--o{ CAMPAIGN_METADATA : has
+		CAMPAIGNS ||--o{ CONTENT_ASSETS : contains
+		CAMPAIGNS ||--o{ TRANSACTIONS : funds
+```
+
+---
+
+## Tech Stack
+
+- Python 3.12
+- FastAPI (HTTP MCP adapters / service endpoints)
+- PostgreSQL (primary relational store)
+- Weaviate (vector DB for embeddings and semantic search)
+- AsyncPG / SQLAlchemy Core for DB access
+- AgentKit for transactional/agentic payment workflows
+- MCP (Model-Context-Proxy) for all external tool/service access
+- Uvicorn / Gunicorn for ASGI hosting
+
+## Operational Notes
+
+- All external calls (trend sources, payment rails, vector DB writes) must be proxied through MCP with audit envelopes.
+- Store audit and governance events in JSONB fields to enable tamper-evident append-only logs (consider signing envelopes and storing receipts).
+- Maintain a mapping between PostgreSQL entities and Weaviate object IDs via `embedding_ref` or `semantic_ref` fields to facilitate joins.
 
 ## Tech Stack
 
