@@ -8,117 +8,117 @@ SO THAT [Value].
 
 ---
 
-AS AN Planner,
+# Project Chimera — Functional User Stories
 
-I NEED TO fetch trending signals from external social sources (e.g., MoltBook) via MCP,
+Format: AS AN [Agent Role],
 
-SO THAT I CAN align campaign objectives and content strategy with emergent viral patterns.
+I NEED TO [Action],
+
+SO THAT [Value].
 
 ---
 
 AS AN Planner,
 
-I NEED TO subscribe to ensemble trend summaries produced by the FastRender Swarm via MCP,
+I NEED TO sense and aggregate trending signals from MoltBook and other social sources via MCP,
 
-SO THAT I CAN prioritize high-impact topics and allocate Worker rendering capacity accordingly.
+SO THAT I CAN produce canonicalized campaign intents (Proof‑of‑Intent) aligned with emergent audience signals.
+
+---
+
+AS AN Planner,
+
+I NEED TO sign and publish a Proof‑of‑Intent (PoI) envelope to the OpenClaw mesh via MCP,
+
+SO THAT the swarm and external validators can ACK, verify provenance, and coordinate campaign scheduling.
+
+---
+
+AS AN Planner,
+
+I NEED TO prioritize campaign objectives and allocate budgets/worker-capacity using ensemble trend summaries,
+
+SO THAT high-impact topics receive appropriate rendering resources within the FastRender Hierarchical Swarm.
 
 ---
 
 AS AN Worker,
 
-I NEED TO request trend-context payloads from MCP before generating candidates,
+I NEED TO accept trend-context payloads (MCP) and generate high-quality video content using declared skillsets (scripting, editing, rendering, captioning),
 
-SO THAT I CAN produce content that is contextually relevant and more likely to achieve high confidence scores.
+SO THAT I CAN produce candidate artifacts that maximize ensemble agreement and calibrated confidence.
 
 ---
 
 AS AN Worker,
 
-I NEED TO submit generated content to the Judge service through MCP for automated validation checks,
+I NEED TO attach rendering telemetry, versioned model metadata, and semantic memory references (Weaviate IDs) to each artifact and submit them to Judge via MCP,
 
-SO THAT I CAN avoid publishing content that violates policy or safety constraints.
+SO THAT the Judge and audit pipelines can reproduce, validate, and score each candidate.
+
+---
+
+AS AN Worker,
+
+I NEED TO participate in FastRender consensus rounds (ensemble scoring) and report local agreement metrics,
+
+SO THAT a consolidated ensemble_score can be computed to determine publishability against governance thresholds.
 
 ---
 
 AS AN Judge,
 
-I NEED TO run multi-stage validation (toxicity, copyright, factuality, reputation checks) via approved MCP tools,
+I NEED TO validate artifacts against multi-stage safety rules (toxicity, copyright, factuality, reputation) using approved MCP tools,
 
-SO THAT I CAN certify content as safe for publish or flag it for Planner review.
+SO THAT I CAN issue a signed verdict (`pass|fail|needs_review`) and supply a calibrated confidence score and explainability payload.
 
 ---
 
 AS AN Judge,
 
-I NEED TO provide a calibrated confidence score and an explainability payload for each validation result,
+I NEED TO enforce the governance publish rule requiring `calibrated_confidence >= 0.85` (combined with ensemble agreement),
 
-SO THAT Planner and Worker can understand why content passed/failed and iteratively improve generation.
-
----
-
-AS AN Planner,
-
-I NEED TO request A/B content experiments and designate evaluation windows via MCP,
-
-SO THAT I CAN measure ensemble confidence and engagement to select winners for scaled publication.
-
----
-
-AS AN Worker,
-
-I NEED TO record rendering telemetry and ensemble agreement metrics to the MCP audit channel,
-
-SO THAT downstream evaluation and the Judge can compute rolling confidence and safety statistics.
+SO THAT autonomous publishes meet the safety and quality bar defined by governance.
 
 ---
 
 AS AN CFO,
 
-I NEED TO initiate and authorize Agentic Commerce wallet payments via MCP (e.g., creator payouts, ad spend),
+I NEED TO authorize and execute Agentic Commerce wallet transactions via the Coinbase AgentKit through MCP (payouts, promotions, refunds),
 
-SO THAT I CAN fund promotions and compensate contributors while keeping payments auditable.
-
----
-
-AS AN Worker,
-
-I NEED TO trigger a payment request to the CFO via MCP after a post meets publish thresholds (confidence >= required threshold),
-
-SO THAT creator payouts or promotion budgets can be executed automatically and atomically with publish events.
-
----
-
-AS AN Judge,
-
-I NEED TO verify that any payment-requesting content passes compliance checks before forwarding the payment event via MCP,
-
-SO THAT financial disbursements do not enable policy-violating content.
+SO THAT financial flows are auditable and atomic relative to publish events and campaign settlements.
 
 ---
 
 AS AN CFO,
 
-I NEED TO receive tamper-evident audit records (Planner intent, Worker artifact, Judge verdict) via MCP before signing payments,
+I NEED TO receive tamper-evident audit envelopes (Planner PoI, Worker artifact, Judge verdict) before signing payments,
 
-SO THAT payment approvals are defensible and traceable for accounting and regulatory audits.
-
----
-
-AS AN Planner,
-
-I NEED TO retire or throttle Worker campaigns based on rolling confidence and safety metrics provided via MCP,
-
-SO THAT I CAN dynamically reallocate spend and capacity toward higher-performing strategies.
+SO THAT every disbursement is defensible, traceable, and reversible when policy violations are discovered.
 
 ---
 
-AS AN Judge,
+AS AN User,
 
-I NEED TO be able to request a human review escalation and a temporary hold on payments/publish via MCP,
+I NEED TO monitor the swarm via the HITL dashboard (campaign health, rolling confidence distributions, safety incidents, and payment ledger),
 
-SO THAT ambiguous or high-risk cases receive human oversight before irreversible actions occur.
+SO THAT I CAN intervene (pause, throttle, escalate) and audit decisions produced by the Planner/Worker/Judge pipeline.
 
 ---
+
+AS AN System,
+
+I NEED TO emit Proof‑of‑Intent announcements, availability heartbeats, and receive OpenClaw ACKs via MCP,
+
+SO THAT the node's operational state, active intents, and validator receipts are globally discoverable and auditable.
+
+---
+
+Notes:
+
+- All inter-agent messages, trend fetches, validation calls, and payment actions MUST be proxied through MCP with `mcp_request`/`mcp_response` envelopes.
+- Worker skill declarations should be typed (e.g., `video:render:v1`, `audio:mix:v2`) and discoverable via registry to enable specialized assignment.
+- Any publish event must satisfy ensemble and Judge checks; otherwise it must be marked `needs_review` and follow escalation workflows surfaced in the HITL dashboard.
 
 Notes:
 

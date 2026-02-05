@@ -2,22 +2,30 @@
 
 ## Persistence Layer (PostgreSQL)
 
-This layer stores canonical campaign state, financial transactions, and audit envelopes. The schema follows the Domain Architecture: normalized core entities (Campaigns, Transactions) and JSONB envelopes for flexible audit, model metadata, and policy traces.
+This layer stores canonical campaign state, metadata, financial transactions, and tamper-evident audit envelopes. The design follows the Domain Architecture: normalized core entities (Campaigns, Transactions) with append-only `campaign_metadata` for intents, ACKs, and audit traces.
 
 -- Campaigns
 CREATE TABLE campaigns (
 id UUID PRIMARY KEY,
 name TEXT NOT NULL,
 planner_id UUID NOT NULL,
-strategy JSONB DEFAULT '{}'::jsonb,
+objective TEXT,
 start_at TIMESTAMPTZ,
 end_at TIMESTAMPTZ,
-status TEXT, -- draft, active, paused, archived
+status TEXT CHECK (status IN ('draft','active','paused','archived')),
 budget_bigint BIGINT,
-metadata JSONB DEFAULT '{}'::jsonb,
-audit JSONB DEFAULT '{}'::jsonb, -- tamper-evident intent/ACK history
 created_at TIMESTAMPTZ DEFAULT now(),
 updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Campaign Metadata (append-only envelopes: PoI, ACKs, audit entries)
+CREATE TABLE campaign_metadata (
+id UUID PRIMARY KEY,
+campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+envelope_type TEXT NOT NULL, -- e.g. intent|ack|audit|model_snapshot
+envelope JSONB NOT NULL, -- canonical PoI, ACK, or audit payload
+signature JSONB, -- {algorithm, public_key_ref, signature_blob, key_version}
+created_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- Transactions (AgentKit-backed)
@@ -41,40 +49,38 @@ settled_at TIMESTAMPTZ
 Notes:
 
 - Use `UUID` for primary keys and references; use `JSONB` for flexible payloads and audit envelopes.
-- Keep `audit` envelopes append-only in practice: application code should add audit entries rather than replace them.
+- Treat `campaign_metadata` as append-only: insert new metadata rows for each PoI, ACK, or audit event instead of mutating previous entries.
+- Persist cryptographic receipts (ACKs, signed verdicts) in `campaign_metadata.envelope` and store signature details in `signature`.
 
 ## Vector Store (Weaviate) — Semantic Memory
 
-Weaviate stores embeddings and enables semantic search for content recall, trend-context retrieval, and similarity lookups. Below is an example Weaviate class schema for Chimera's semantic memory.
+Weaviate stores embeddings and enables semantic search for content recall, trend-context retrieval, and similarity lookups. Use a class to capture canonicalized text/snippets, exemplars, and policy rationale with metadata for provenance.
 
 Example Weaviate Class (JSON):
 {
 "class": "SemanticMemory",
 "vectorizer": "text2vec-transformers",
-"moduleConfig": {
-"text2vec-transformers": {"pooling": "mean"}
-},
+"moduleConfig": {"text2vec-transformers": {"pooling": "mean"}},
 "properties": [
 {"name": "text", "dataType": ["text"]},
 {"name": "campaignRef", "dataType": ["string"]},
 {"name": "agentRef", "dataType": ["string"]},
-{"name": "metadata", "dataType": ["text"]},
+{"name": "tags", "dataType": ["string[]"]},
+{"name": "policy_ref", "dataType": ["string"]},
 {"name": "timestamp", "dataType": ["date"]}
 ]
 }
 
 Usage notes:
 
-- Store canonical content snippets, trend exemplars, and policy rationale in `SemanticMemory` with vectors attached by Weaviate.
-- Reference Weaviate object IDs in PostgreSQL via `embedding_ref` or `semantic_ref` fields when needed for fast joins.
+- Store canonical content snippets, trend exemplars, and policy rationales in `SemanticMemory` with vector embeddings.
+- Persist Weaviate object IDs back into PostgreSQL rows (e.g., `campaign_metadata.envelope.ref_id`) to maintain referential links between relational records and semantic objects.
 
 ## API Contracts (MCP-standard JSON schemas)
 
 All tool APIs MUST use an `mcp_request`/`mcp_response` envelope. Implementations should provide strict Pydantic models matching these schemas.
 
-Trend Sensing Tool
-
-Request (Input):
+fetch_trends (MoltBook + ensemble) — Request (Input):
 {
 "mcp_request": {
 "request_id": "uuid",
@@ -82,12 +88,12 @@ Request (Input):
 "caller": {"agent_id": "uuid", "role": "Planner"}
 },
 "query": {
-"sources": ["moltbook", "trend-api"],
+"sources": ["moltbook", "social_api"],
 "since": "ISO8601",
-"max_items": 100,
+"max_items": 200,
 "filters": {"region": "global", "language": "en"}
 },
-"options": {"ensemble": true, "include_examples": true}
+"options": {"ensemble": true, "include_examples": true, "use_semantic_memory": true}
 }
 
 Response (Output):
@@ -97,9 +103,9 @@ Response (Output):
 {
 "topic": "string",
 "score": 0.0,
-"trend_velocity": 0.0,
-"examples": [{"text":"...","source":"moltbook","ts":"ISO8601"}],
-"metadata": {"tags": ["music","meme"]}
+"velocity": 0.0,
+"examples": [{"text":"...","source":"moltbook","ts":"ISO8601", "ref_id": "weaviate-id"}],
+"metadata": {"tags": ["tag1","tag2"]}
 }
 ],
 "ensemble_score": 0.0,
@@ -107,14 +113,13 @@ Response (Output):
 "diagnostics": {"sources_used": ["moltbook"], "model_versions": {}}
 }
 
-Judge Validation Tool
-
-Request (Input):
+validate_content — Request (Input):
 {
 "mcp_request": {"request_id": "uuid", "timestamp": "ISO8601", "caller": {"agent_id": "uuid", "role": "Worker"}},
 "artifact": {
 "id": "uuid",
 "campaign_id": "uuid",
+"type": "video|image|text",
 "text": "string",
 "media_refs": ["media-id-uuid"],
 "render_meta": {"template":"v1","worker_id":"uuid"}
@@ -131,7 +136,7 @@ Response (Output):
 "toxicity": {"score": 0.12, "pass": true, "explain": "OK"},
 "copyright": {"matches": [], "pass": true}
 },
-"confidence": 0.92,
+"confidence": 0.92, -- calibrated confidence used for governance
 "explainability": {"highlights": [{"span": [10, 45], "reason": "factuality_issue"}]},
 "signed_by": "judge_agent_id",
 "audit": {"mcp_request_id": "uuid", "policy_version": "v1"}
