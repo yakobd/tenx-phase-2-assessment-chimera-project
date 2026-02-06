@@ -1,16 +1,16 @@
 .PHONY: setup test docker-build docker-test spec-check
 
 UV=uv
-IMAGE_NAME=chimera-governor
-DOCKERFILE_PATH="Docker Folder/Dockerfile"
+IMAGE_NAME=chimera-agent
+DOCKERFILE_PATH=Dockerfile/Dockerfile
 
 setup:
 	@echo "Installing dependencies with uv (frozen lock)..."
-	$(UV) sync --frozen
+	$(UV) sync
 
 test:
 	@echo "Running pytest..."
-	pytest -q
+	PYTHONPATH=. $(UV) run pytest
 
 docker-build:
 	@echo "Building Docker image $(IMAGE_NAME) using $(DOCKERFILE_PATH)..."
@@ -18,7 +18,7 @@ docker-build:
 
 docker-test: docker-build
 	@echo "Running tests inside Docker image $(IMAGE_NAME)..."
-	docker run --rm $(IMAGE_NAME) pytest -q
+	docker run --rm $(IMAGE_NAME)
 
 spec-check:
 	@echo "Running spec check script..."
