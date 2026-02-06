@@ -10,12 +10,12 @@ To assist in the development of Chimera, the following MCP servers are configure
 
 ## Agent MCP Tools (Runtime Level)
 
-These tools are exposed to the swarm for autonomous execution, with contracts defined in `skills/README.md`:
+These tools are exposed to the swarm for autonomous execution, with contracts defined in individual skill READMEs:
 
-- **`skill_trend_analyzer`:** Fetches and scores trends from MoltBook and news APIs. Returns structured trend objects for the Planner.
-- **`skill_video_assembler`:** Orchestrates video generation. Produces `media_metadata` conforming to the PostgreSQL schema.
-- **`skill_safety_judge`:** The Judge's core safety validation skill. Enforces the `calibrated_confidence >= 0.85` governance rule and outputs signed verdicts.
-- **`agentkit_wallet` (Financial Skill):** Proxied interface for Coinbase AgentKit transactions (to be defined in a future skill spec).
+- **`trend_analyzer`** ([README](./skills/trend_analyzer/)): Fetches and scores trends from MoltBook and social APIs.
+- **`video_assembler`** ([README](./skills/video_assembler/)): Assembles video artifacts using MCP video generation tools.
+- **`safety_judge`** ([README](./skills/safety_judge/)): Validates content safety and enforces governance thresholds.
+- **`agentkit_wallet`** (Financial Skill): Proxied interface for Coinbase AgentKit transactions.
 
 ---
 
