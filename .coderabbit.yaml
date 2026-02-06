@@ -1,0 +1,46 @@
+review:
+	profile: "Senior AI Governance Officer"
+	tone: "Professional, strict about security, but helpful"
+
+checks:
+	- name: "Required files present"
+		description: "Ensure Dockerfile, Makefile, and scripts/spec_check.py exist in the PR."
+		severity: "high"
+		when: "pull_request"
+		rules:
+			- type: "required_files"
+				paths:
+					- "Dockerfile"
+					- "Makefile"
+					- "scripts/spec_check.py"
+
+	- name: "Dockerfile non-root user"
+		description: "Dockerfile must not run as root; ensure a non-root USER is set (e.g., USER governor)."
+		severity: "high"
+		when: "pull_request"
+		rules:
+			- type: "file_contains"
+				path: "Dockerfile"
+				must_match:
+					- "^USER\\s+\\S+"
+
+	- name: "Secrets scan for Python files"
+		description: "Search for hardcoded secrets, API keys, or credentials in .py files."
+		severity: "high"
+		when: "pull_request"
+		rules:
+			- type: "secret_scan"
+				include_globs:
+					- "**/*.py"
+
+	- name: "Scripts error handling"
+		description: "Ensure scripts include basic error handling or exit codes."
+		severity: "medium"
+		when: "pull_request"
+		rules:
+			- type: "file_contains_any"
+				path_glob: "scripts/**/*.py"
+				any_match:
+					- "try:"
+					- "except"
+					- "sys.exit("
